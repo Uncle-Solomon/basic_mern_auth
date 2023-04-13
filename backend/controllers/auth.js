@@ -1,10 +1,38 @@
-import User from "../models/User";
+import User from "../models/User.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-import { createJWT } from "../utils/auth.js";
+import createJWT from "../utils/auth.js";
 
-const signup = (req, res, next) => {
+const emailRegexp =
+  /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+
+export const signup = (req, res, next) => {
   let { name, email, password, password_confirmation } = req.body;
+  let errors = [];
+  if (!name) {
+    errors.push({ name: "required" });
+  }
+  if (!email) {
+    errors.push({ email: "required" });
+  }
+  if (!emailRegexp.test(email)) {
+    errors.push({ email: "invalid" });
+  }
+  if (!password) {
+    errors.push({ password: "required" });
+  }
+  if (!password_confirmation) {
+    errors.push({
+      password_confirmation: "required",
+    });
+  }
+  if (password != password_confirmation) {
+    errors.push({ password: "mismatch" });
+  }
+  if (errors.length > 0) {
+    return res.status(422).json({ errors: errors });
+  }
+
   User.findOne({ email: email })
     .then((user) => {
       if (user) {
@@ -43,8 +71,21 @@ const signup = (req, res, next) => {
     });
 };
 
-const login = (req, res) => {
+export const login = (req, res) => {
   let { email, password } = req.body;
+  let errors = [];
+  if (!email) {
+    errors.push({ email: "required" });
+  }
+  if (!emailRegexp.test(email)) {
+    errors.push({ email: "invalid email" });
+  }
+  if (!password) {
+    errors.push({ passowrd: "required" });
+  }
+  if (errors.length > 0) {
+    return res.status(422).json({ errors: errors });
+  }
   User.findOne({ email: email })
     .then((user) => {
       if (!user) {
@@ -67,13 +108,11 @@ const login = (req, res) => {
                   res.status(500).json({ error: err });
                 }
                 if (decoded) {
-                  return res
-                    .status(500)
-                    .json({
-                      success: true,
-                      token: access_token,
-                      message: user,
-                    });
+                  return res.status(500).json({
+                    success: true,
+                    token: access_token,
+                    message: user,
+                  });
                 }
               }
             );
